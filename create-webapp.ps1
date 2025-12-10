@@ -1,6 +1,6 @@
 $UserName = ((az ad signed-in-user show | ConvertFrom-Json).userPrincipalName -replace '@.*$','' -replace '\W','').ToLower()
 
-az group create --name rg-fingerflitzer --location swedencentral | Out-Null
+az group create --name rg-fingerflitzer --location norwayeast | Out-Null
 
 az appservice plan create `
   --name asp-fingerflitzer `
@@ -16,6 +16,22 @@ az webapp create `
   --public-network-access Enabled `
   --plan asp-fingerflitzer `
   --resource-group rg-fingerflitzer | Out-Null
+
+$SubscriptionId = (az account show | ConvertFrom-Json).id
+$ServicePrincipalSecret = az ad sp create-for-rbac `
+  --name "gh-action-to-deploy-fingerflitzer-webapp-$UserName" `
+  --role contributor `
+  --scopes /subscriptions/$SubscriptionId/resourceGroups/rg-fingerflitzer/providers/Microsoft.Web/sites/wa-fingerflitzer-$UserName `
+  --json-auth
+
+gh secret set AZURE_CREDENTIALS `
+  --repo johannesegger/5AHWII2526-HTLVBFingerflitzer `
+  --body "$ServicePrincipalSecret"
+
+az webapp deployment slot create `
+  --slot staging `
+  --name wa-fingerflitzer-$UserName `
+  --resource-group rg-fingerflitzer
 
 # # Allow access from web app to database
 # # see https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-azure-database
@@ -47,4 +63,7 @@ Write-Host "### Web app: https://$($WebApp.defaultHostName)"
 
 <#
 az group delete --name rg-fingerflitzer --no-wait
+$ServicePrincipal = az ad sp list --display-name "gh-action-to-deploy-fingerflitzer-webapp-$UserName" `
+  | ConvertFrom-Json
+az ad sp delete --id $ServicePrincipal.id
 #>
