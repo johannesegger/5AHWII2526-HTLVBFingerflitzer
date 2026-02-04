@@ -4,7 +4,9 @@ gh auth login
 $UserName = ((az ad signed-in-user show | ConvertFrom-Json).userPrincipalName -replace '@.*$','' -replace '\W','').ToLower()
 $GitHubRepositoryName = "johannesegger/5AHWII2526-HTLVBFingerflitzer"
 
-az group create --name rg-fingerflitzer --location norwayeast | Out-Null
+$Location = (az policy assignment list --query "[?name == 'sys.regionrestriction'].parameters.listOfAllowedLocations.value" | ConvertFrom-Json)[0]
+
+az group create --name rg-fingerflitzer --location $Location | Out-Null
 
 az appservice plan create `
   --name asp-fingerflitzer `
