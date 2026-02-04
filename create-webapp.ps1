@@ -1,3 +1,6 @@
+az login
+gh auth login
+
 $UserName = ((az ad signed-in-user show | ConvertFrom-Json).userPrincipalName -replace '@.*$','' -replace '\W','').ToLower()
 $GitHubRepositoryName = "johannesegger/5AHWII2526-HTLVBFingerflitzer"
 
@@ -42,28 +45,31 @@ az webapp config appsettings set `
 gh workflow run publish-fingerflitzer-web-app.yml `
   --repo $GitHubRepositoryName
 
-# # Allow access from web app to database
-# # see https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-azure-database
-# az extension add --name serviceconnector-passwordless --upgrade
-# az webapp connection create postgres-flexible `
-#   --connection beer4me_webapp `
-#   --resource-group rg-beer4me `
-#   --name wa-beer4me-$UserName `
-#   --target-resource-group rg-beer4me `
-#   --server db-beer4me-$UserName `
-#   --database beer4me `
-#   --system-identity `
-#   --client-type dotnet | Out-Null
+# Allow access from web app to database
+# see https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-azure-database
+az extension add --name serviceconnector-passwordless --upgrade
+foreach ($Slot in "production", "staging") {
+  az webapp connection create postgres-flexible `
+    --connection fingerflitzer_webapp_to_db `
+    --resource-group rg-fingerflitzer `
+    --name wa-fingerflitzer-$UserName `
+    --slot $Slot `
+    --target-resource-group rg-fingerflitzer `
+    --server db-fingerflitzer-$UserName `
+    --database fingerflitzer `
+    --system-identity `
+    --client-type dotnet | Out-Null
+}
 
 # az extension add --name rdbms-connect
 # $User = az ad signed-in-user show | ConvertFrom-Json
 # $AccessToken = az account get-access-token --resource-type oss-rdbms | ConvertFrom-Json
 # az postgres flexible-server execute `
-#   --querytext "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO `"aad_beer4me_webapp`";GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO `"aad_beer4me_webapp`";" `
-#   --database-name beer4me `
+#   --querytext "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO `"aad_fingerflitzer_webapp_to_db`";GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO `"aad_fingerflitzer_webapp_to_db`";" `
+#   --database-name fingerflitzer `
 #   --admin-user $User.userPrincipalName `
 #   --admin-password $AccessToken.accessToken `
-#   --name db-beer4me-$UserName
+#   --name db-fingerflitzer-$UserName
 
 $WebApp = az webapp show `
   --name wa-fingerflitzer-$UserName `
@@ -72,8 +78,39 @@ $WebAppStagingSlot = az webapp deployment slot list `
   --resource-group rg-fingerflitzer `
   --name wa-fingerflitzer-$UserName `
   --query "[?name=='staging']" | ConvertFrom-Json
+
+$ReplyUrls = @(
+  "https://localhost/signin-oidc"
+  "https://$($WebApp.defaultHostName)/signin-oidc"
+  "https://$($WebAppStagingSlot.defaultHostName)/signin-oidc"
+)
+$AppRegistration = az ad app create --display-name Fingerflitzer-$UserName `
+  --web-redirect-uris $ReplyUrls | ConvertFrom-Json
+
+$AppSecret = az ad app credential reset --id $AppRegistration.id `
+  --display-name Dev `
+  --append | ConvertFrom-Json
+
+az webapp config appsettings set `
+  --settings "AzureAd__ClientId=$($AppRegistration.appId)" "AzureAd__ClientSecret=$($AppSecret.password)" `
+  --slot staging `
+  --name wa-fingerflitzer-$UserName `
+  --resource-group rg-fingerflitzer
+    
+az webapp config appsettings set `
+  --settings "AzureAd__ClientId=$($AppRegistration.appId)" "AzureAd__ClientSecret=$($AppSecret.password)" `
+  --name wa-fingerflitzer-$UserName `
+  --resource-group rg-fingerflitzer
+
+dotnet user-secrets --project .\HTLVBFingerflitzer.Web\ set AzureAd:ClientSecret $($AppSecret.password)
+
 Write-Host "### Web app: https://$($WebApp.defaultHostName)"
 Write-Host "### Web app staging slot: https://$($WebAppStagingSlot.defaultHostName)"
+
+Write-Host "### App registration:"
+Write-Host "* Client id: $($AppSecret.appId)"
+Write-Host "* Tenant id: $($AppSecret.tenant)"
+Write-Host "* Client secret: $($AppSecret.password)"
 
 <#
 az group delete --name rg-fingerflitzer --no-wait
