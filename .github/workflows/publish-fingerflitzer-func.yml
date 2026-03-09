@@ -1,0 +1,58 @@
+name: Publish HTLVBFingerflitzer func
+
+env:
+  AZURE_FUNCTIONAPP_NAME: func-fingerflitzer-cloudcomputing252600    # set this to the name of your Azure Web App
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.'      # set this to the path to your web app project, defaults to the repository root
+  DOTNET_VERSION: '10'                 # set this to the .NET Core version to use
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: dotnet publish
+        run: dotnet publish .\HTLVBFingerflitzer.GenerateDailyChallengeText -c Release -o ./out 
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: ./out
+
+  deploy:
+    permissions:
+      contents: none
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+
+      - name: 'Login via Azure CLI'
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Functions App
+        uses: Azure/functions-action@v1
+        with:
+          app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}

@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35931.197 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HTLVBFingerflitzer.Web", "HTLVBFingerflitzer.Web\HTLVBFingerflitzer.Web.csproj", "{D26730E7-7C9B-4F34-B6EE-D4E4A9114524}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HTLVBFingerflitzer.GenerateDailyChallengeText", "HTLVBFingerflitzer.GenerateDailyChallengeText\HTLVBFingerflitzer.GenerateDailyChallengeText.csproj", "{A61FC176-00D2-47BF-9EC6-C097D0737FD0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{D26730E7-7C9B-4F34-B6EE-D4E4A9114524}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D26730E7-7C9B-4F34-B6EE-D4E4A9114524}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D26730E7-7C9B-4F34-B6EE-D4E4A9114524}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A61FC176-00D2-47BF-9EC6-C097D0737FD0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A61FC176-00D2-47BF-9EC6-C097D0737FD0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A61FC176-00D2-47BF-9EC6-C097D0737FD0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A61FC176-00D2-47BF-9EC6-C097D0737FD0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
