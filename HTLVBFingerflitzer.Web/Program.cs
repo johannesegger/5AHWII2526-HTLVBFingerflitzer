@@ -29,6 +29,17 @@ else if (dailyChallengeTextGeneratorType == "rotating-text")
         )
     );
 }
+else if (dailyChallengeTextGeneratorType == "db-text")
+{
+    builder.Services.AddSingleton<TimeProvider, HTLVBTimeProvider>();
+
+    string connectionStringTemplate =
+        dailyChallengeSection.GetValue<string>("ConnectionString")
+        ?? throw new Exception("Connection string for daily challenge text not found.");
+    builder.Services.AddSingleton(new PostgreSQLConnectionFactory(connectionStringTemplate));
+
+    builder.Services.AddSingleton<IDailyChallengeTextGenerator, PostgreSQLDailyChallengeTextGenerator>();
+}
 
 var app = builder.Build();
 
